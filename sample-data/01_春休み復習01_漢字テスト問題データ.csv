@@ -1,0 +1,32 @@
+﻿record_type,section,key,value
+META,COMMON,file_prefix,01_春休み復習01
+META,COMMON,date_text,一日目
+META,COMMON,reading_date_text,一日目
+META,COMMON,main_title,かん字テスト
+META,COMMON,reading_title,読みテスト
+META,COMMON,class_label,くみ
+META,COMMON,group_label,くみ
+META,COMMON,grade_label,番
+META,COMMON,name_label,名前
+META,COMMON,guide_tone_adjust,0
+META,COMMON,main_instruction,"かん字を かきましょう。
+ひらがなが つく ときは、かん字と ひらがなを かいてね。"
+META,COMMON,reading_instruction,"「よみがな」を かきましょう。
+ひらがなも ひつような ときは、いっしょに かいてね。
+文を かんせいさせてね。"
+META,COMMON,main_font_family,
+META,COMMON,reading_font_family,
+META,COMMON,main_font_adjust_pt,0
+META,COMMON,reading_font_adjust_pt,0
+META,COMMON,is_randomized,0
+META,COMMON,randomized_order,0
+QUESTION,MAIN,1,[広い|★ひろい][場|ば]しょ。
+QUESTION,MAIN,2,ベルを//[鳴らす。|★ならす。]
+QUESTION,MAIN,3,[空|そら]が//[晴れる。|★はれる。]
+QUESTION,MAIN,4,ここを//[通る。|★とおる。]
+QUESTION,MAIN,5,はっきり//[答える。|★こたえる。]
+QUESTION,MAIN,6,ゆっくり//[歩く。|★あるく。]
+QUESTION,MAIN,7,[体|からだ]を//[休める。|★やすめる。]
+QUESTION,MAIN,8,[米|こめ]と//[麦。|むぎ。]
+QUESTION,MAIN,9,[空|そら]の//[雲。|くも。]
+QUESTION,MAIN,10,[遠い|★とおい][町。|まち。]
