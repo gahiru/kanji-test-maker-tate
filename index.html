@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>漢字テストメーカー縦 正式公開版 v1.00</title>
+<title>漢字テストメーカー縦 正式公開版 v1.01</title>
 <style>
 :root {
   --bg: #f6f8fb;
@@ -207,7 +207,7 @@ ul.compact {
 </head>
 <body>
 <div class="wrap">
-  <h1>漢字テストメーカー縦 <span class="badge">正式公開版 v1.00</span></h1>
+  <h1>漢字テストメーカー縦 <span class="badge">正式公開版 v1.01</span></h1>
 
 
   <div class="panel note">
@@ -227,6 +227,10 @@ ul.compact {
       <button id="btn_export_answer_pdf" class="ghost">💾 こたえPDF保存</button>
       <button id="btn_export_reading_pdf" class="ghost">💾 読みテストPDF保存</button>
       <button id="btn_export_three">💾 3つのPDF+CSVを保存</button>
+    </div>
+    <div class="toolbar" style="margin-top:10px; align-items:center;">
+      <button id="btn_load_practice" class="ghost">📝 サンプル問題をロード</button>
+      <span class="small">確認メッセージのあとで、サンプル問題の内容を読み込みます。</span>
     </div>
     <input type="file" id="csv_file" accept=".csv,text/csv" style="display:none">
     <div id="status" style="margin-top:10px;">準備できました。</div>
@@ -7680,6 +7684,94 @@ function drawPatternTokens(ctx, tokens, x, y, w, h, style, options) {
     promptH: promptH
   };
 }
+
+
+
+/* public release v1.01 practice sample loader */
+var PRACTICE_SAMPLE_RELATIVE_PATH = 'sample-data/01_春休み復習01_漢字テスト問題データ.csv';
+var PRACTICE_SAMPLE_CSV = `﻿record_type,section,key,value
+META,COMMON,file_prefix,01_春休み復習01
+META,COMMON,date_text,一日目
+META,COMMON,reading_date_text,一日目
+META,COMMON,main_title,かん字テスト
+META,COMMON,reading_title,読みテスト
+META,COMMON,class_label,くみ
+META,COMMON,group_label,くみ
+META,COMMON,grade_label,番
+META,COMMON,name_label,名前
+META,COMMON,guide_tone_adjust,0
+META,COMMON,main_instruction,"かん字を かきましょう。
+ひらがなが つく ときは、かん字と ひらがなを かいてね。"
+META,COMMON,reading_instruction,"「よみがな」を かきましょう。
+ひらがなも ひつような ときは、いっしょに かいてね。
+文を かんせいさせてね。"
+META,COMMON,main_font_family,
+META,COMMON,reading_font_family,
+META,COMMON,main_font_adjust_pt,0
+META,COMMON,reading_font_adjust_pt,0
+META,COMMON,is_randomized,0
+META,COMMON,randomized_order,0
+QUESTION,MAIN,1,[広い|★ひろい][場|ば]しょ。
+QUESTION,MAIN,2,ベルを//[鳴らす。|★ならす。]
+QUESTION,MAIN,3,[空|そら]が//[晴れる。|★はれる。]
+QUESTION,MAIN,4,ここを//[通る。|★とおる。]
+QUESTION,MAIN,5,はっきり//[答える。|★こたえる。]
+QUESTION,MAIN,6,ゆっくり//[歩く。|★あるく。]
+QUESTION,MAIN,7,[体|からだ]を//[休める。|★やすめる。]
+QUESTION,MAIN,8,[米|こめ]と//[麦。|むぎ。]
+QUESTION,MAIN,9,[空|そら]の//[雲。|くも。]
+QUESTION,MAIN,10,[遠い|★とおい][町。|まち。]
+`;
+SAMPLE_CSV = PRACTICE_SAMPLE_CSV;
+
+async function getPracticeSampleCsvText() {
+  try {
+    var protocol = (window.location && window.location.protocol) ? String(window.location.protocol).toLowerCase() : '';
+    if (typeof fetch === 'function' && (protocol === 'https:' || protocol === 'http:')) {
+      var response = await fetch(PRACTICE_SAMPLE_RELATIVE_PATH + '?v=1.01', { cache: 'no-store' });
+      if (response && response.ok) {
+        var fetchedText = await response.text();
+        if (trimText(String(fetchedText || '').replace(/^﻿/, ''))) {
+          return fetchedText;
+        }
+      }
+    }
+  } catch (e) {}
+  return PRACTICE_SAMPLE_CSV;
+}
+
+function confirmPracticeSampleLoad() {
+  var message = 'サンプル問題を読み込みます。\n現在入力している内容は消えます。\nよろしいですか？';
+  try {
+    if (window.confirm) { return window.confirm(message); }
+  } catch (e) {}
+  return true;
+}
+
+async function loadPracticeSample() {
+  if (!confirmPracticeSampleLoad()) {
+    setStatus('サンプル問題の読込を中止しました。', true);
+    return;
+  }
+  try {
+    var csvText = await getPracticeSampleCsvText();
+    applyCsvText(csvText);
+    await renderPreview('main');
+    setStatus('サンプル問題を読み込みました。', false);
+  } catch (e) {
+    setStatus('サンプル問題を読み込めませんでした: ' + ((e && e.message) ? e.message : e), true);
+  }
+}
+
+var __bindButtonsForPracticeSample = bindButtons;
+bindButtons = function() {
+  __bindButtonsForPracticeSample();
+  var practiceButton = byId('btn_load_practice');
+  if (practiceButton && !practiceButton.dataset.practiceBound) {
+    practiceButton.dataset.practiceBound = '1';
+    practiceButton.addEventListener('click', loadPracticeSample);
+  }
+};
 
 window.addEventListener('DOMContentLoaded', initApp);
 })();
