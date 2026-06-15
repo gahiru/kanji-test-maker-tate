@@ -5,6 +5,8 @@ CSVで問題を管理し、漢字テスト、こたえ、読みテストを印�
 
 現在の正式公開版: v1.02
 
+公開URL: https://gahiru.github.io/kanji-test-maker-tate/
+
 This is a single-file browser tool for creating printable vertical-layout kanji and reading worksheets for elementary school use.
 
 ## 特徴
@@ -16,7 +18,7 @@ This is a single-file browser tool for creating printable vertical-layout kanji 
 - PDF保存とブラウザ印刷に対応しています
 - 旧横版CSVも読み込めます。縦版で使わない項目は無視されます
 - 句読点、送り仮名、かっこ付き回答欄を含む日本語縦組みの見た目を調整しています
-- サーバー不要で、`index.html` だけをブラウザで開いて使えます
+- サーバー不要で、公開URLまたは `index.html` だけをブラウザで開いて使えます
 - 入力した問題データはブラウザ内で処理され、学習者名簿などを外部サーバーへ送信しません
 
 ## 想定利用者
@@ -27,7 +29,7 @@ This is a single-file browser tool for creating printable vertical-layout kanji 
 
 ## 使い方
 
-1. `index.html` をブラウザで開きます
+1. 公開URLを開くか、`index.html` をブラウザで開きます
 2. `CSV読込` から問題データを読み込みます
 3. 必要に応じて問題文、タイトル、説明文、フォント設定を調整します
 4. `漢字テストPDF保存`、`こたえPDF保存`、`読みテストPDF保存`、または `3つのPDF+CSVを保存` を選びます
@@ -66,10 +68,10 @@ PRベースで変更し、サンプルCSVからの表示確認、PDF出力確認
 
 ## ロードマップ
 
-- GitHub Pagesなどで使いやすい公開URLを整備
 - PDF出力の回帰確認手順の整備
 - 先生・保護者からの利用フィードバックをIssueで管理
 - 利用者フィードバックに基づくサンプルデータ拡充
+- 公開URLの利用状況やフィードバックに応じたUI改善
 
 ## 貢献
 
@@ -87,6 +89,8 @@ MIT License. See [LICENSE](LICENSE).
 Vertical Kanji Test Maker is a single-file browser tool for creating printable Japanese kanji worksheets.
 It is designed for teachers and parents who need quick vertical-layout kanji tests without a backend service.
 
+Live site: https://gahiru.github.io/kanji-test-maker-tate/
+
 ### Features
 
 - Creates vertical kanji worksheets for elementary school use
@@ -94,12 +98,12 @@ It is designed for teachers and parents who need quick vertical-layout kanji tes
 - Prints 10 questions as 5/5, 11 questions as 6/5, and 12 questions as 6/6
 - Loads, edits, and saves CSV data
 - Exports printable PDFs
-- Runs as a single static HTML file
+- Runs as a single static HTML file or through GitHub Pages
 - Processes worksheet data in the browser without uploading it to a server
 
 ### Basic Use
 
-1. Open `index.html` in a browser
+1. Open the live site or `index.html` in a browser
 2. Load a CSV file
 3. Adjust questions, titles, instructions, or font settings
 4. Export the kanji test, answer sheet, reading test, or all outputs together
