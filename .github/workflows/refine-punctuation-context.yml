@@ -24,86 +24,57 @@ jobs:
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
 
-          old_header = """function getUnifiedPunctuationBoxHeight(style, availableH) {
-  var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.08, -mm(0.18), mm(0.22));
-  var base = mm(4.50) + adjust;
-  if (availableH == null) { return base; }
-  return Math.max(mm(2.35), Math.min(base, availableH));
-}
+          start_marker = "function getUnifiedPunctuationBoxHeight(style, availableH) {"
+          end_marker = "function drawFixedDisplaySegment(ctx, text, suffix, centerX, y, h, laneW, style, color) {"
+          start = s.index(start_marker)
+          end = s.index(end_marker, start)
+          new_header = "\n".join([
+              "function getUnifiedPunctuationBoxHeight(style, availableH, context) {",
+              "  var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.08, -mm(0.18), mm(0.22));",
+              "  var base = (context === 'afterParen' ? mm(4.50) : mm(4.25)) + adjust;",
+              "  if (availableH == null) { return base; }",
+              "  return Math.max(mm(2.35), Math.min(base, availableH));",
+              "}",
+              "",
+              "function getUnifiedPunctuationFontSize(style, boxH, text, context) {",
+              "  var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.10, -mm(0.22), mm(0.28));",
+              "  var isKuten = String(text || '').indexOf('。') >= 0;",
+              "  var maxSize = isKuten ? (context === 'afterParen' ? mm(5.70) : mm(5.35)) : mm(5.12);",
+              "  var boxRatio = isKuten ? (context === 'afterParen' ? 1.19 : 1.08) : 1.06;",
+              "  return Math.max(mm(2.35), Math.min(maxSize + adjust, boxH * boxRatio));",
+              "}",
+              "",
+              "function getUnifiedPunctuationShift(laneW, context) {",
+              "  if (context === 'afterParen') {",
+              "    return Math.min(mm(1.48), Math.max(mm(0.76), laneW * 0.15));",
+              "  }",
+              "  return Math.min(mm(1.30), Math.max(mm(0.62), laneW * 0.13));",
+              "}",
+              "",
+              "function getUnifiedPunctuationYOffset(text, context) {",
+              "  if (String(text || '').indexOf('。') >= 0) {",
+              "    return context === 'afterParen' ? mm(0.50) : mm(0.12);",
+              "  }",
+              "  return context === 'afterParen' ? mm(0.22) : mm(0.06);",
+              "}",
+              "",
+              "function drawUnifiedPunctuation(ctx, text, centerX, topY, boxH, laneW, style, color, context) {",
+              "  if (!text) { return; }",
+              "  context = context || 'afterText';",
+              "  var actualH = getUnifiedPunctuationBoxHeight(style, boxH, context);",
+              "  var drawY = topY + Math.max(0, boxH - actualH) + getUnifiedPunctuationYOffset(text, context);",
+              "  drawVerticalTextFixedSize(ctx, text, centerX + getUnifiedPunctuationShift(laneW, context), drawY, actualH, {",
+              "    padding: 0,",
+              "    color: color || '#111',",
+              "    weight: '400',",
+              "    fontFamily: style.printFont",
+              "  }, getUnifiedPunctuationFontSize(style, actualH, text, context));",
+              "}",
+              "",
+          ])
+          s = s[:start] + new_header + s[end:]
 
-function getUnifiedPunctuationFontSize(style, boxH, text) {
-  var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.10, -mm(0.22), mm(0.28));
-  var isKuten = String(text || '').indexOf('。') >= 0;
-  var maxSize = isKuten ? mm(5.70) : mm(5.12);
-  var boxRatio = isKuten ? 1.19 : 1.06;
-  return Math.max(mm(2.35), Math.min(maxSize + adjust, boxH * boxRatio));
-}
-
-function getUnifiedPunctuationShift(laneW) {
-  return Math.min(mm(1.48), Math.max(mm(0.76), laneW * 0.15));
-}
-
-function getUnifiedPunctuationYOffset(text) {
-  if (String(text || '').indexOf('。') >= 0) { return mm(0.50); }
-  return mm(0.22);
-}
-
-function drawUnifiedPunctuation(ctx, text, centerX, topY, boxH, laneW, style, color) {
-  if (!text) { return; }
-  var actualH = getUnifiedPunctuationBoxHeight(style, boxH);
-  var drawY = topY + Math.max(0, boxH - actualH) + getUnifiedPunctuationYOffset(text);
-  drawVerticalTextFixedSize(ctx, text, centerX + getUnifiedPunctuationShift(laneW), drawY, actualH, {
-    padding: 0,
-    color: color || '#111',
-    weight: '400',
-    fontFamily: style.printFont
-  }, getUnifiedPunctuationFontSize(style, actualH, text));
-}
-"""
-          new_header = """function getUnifiedPunctuationBoxHeight(style, availableH, context) {
-  var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.08, -mm(0.18), mm(0.22));
-  var base = (context === 'afterParen' ? mm(4.50) : mm(4.25)) + adjust;
-  if (availableH == null) { return base; }
-  return Math.max(mm(2.35), Math.min(base, availableH));
-}
-
-function getUnifiedPunctuationFontSize(style, boxH, text, context) {
-  var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.10, -mm(0.22), mm(0.28));
-  var isKuten = String(text || '').indexOf('。') >= 0;
-  var maxSize = isKuten ? (context === 'afterParen' ? mm(5.70) : mm(5.35)) : mm(5.12);
-  var boxRatio = isKuten ? (context === 'afterParen' ? 1.19 : 1.08) : 1.06;
-  return Math.max(mm(2.35), Math.min(maxSize + adjust, boxH * boxRatio));
-}
-
-function getUnifiedPunctuationShift(laneW, context) {
-  if (context === 'afterParen') {
-    return Math.min(mm(1.48), Math.max(mm(0.76), laneW * 0.15));
-  }
-  return Math.min(mm(1.30), Math.max(mm(0.62), laneW * 0.13));
-}
-
-function getUnifiedPunctuationYOffset(text, context) {
-  if (String(text || '').indexOf('。') >= 0) {
-    return context === 'afterParen' ? mm(0.50) : mm(0.12);
-  }
-  return context === 'afterParen' ? mm(0.22) : mm(0.06);
-}
-
-function drawUnifiedPunctuation(ctx, text, centerX, topY, boxH, laneW, style, color, context) {
-  if (!text) { return; }
-  context = context || 'afterText';
-  var actualH = getUnifiedPunctuationBoxHeight(style, boxH, context);
-  var drawY = topY + Math.max(0, boxH - actualH) + getUnifiedPunctuationYOffset(text, context);
-  drawVerticalTextFixedSize(ctx, text, centerX + getUnifiedPunctuationShift(laneW, context), drawY, actualH, {
-    padding: 0,
-    color: color || '#111',
-    weight: '400',
-    fontFamily: style.printFont
-  }, getUnifiedPunctuationFontSize(style, actualH, text, context));
-}
-"""
           replacements = [
-              (old_header, new_header),
               ("var suffixReserve = suffix ? getUnifiedPunctuationBoxHeight(style, mm(4.60)) : 0;", "var suffixReserve = suffix ? getUnifiedPunctuationBoxHeight(style, mm(4.35), 'afterText') : 0;"),
               ("drawUnifiedPunctuation(ctx, suffix, centerX, y + h - suffixReserve, suffixReserve, laneW, style, color);", "drawUnifiedPunctuation(ctx, suffix, centerX, y + h - suffixReserve, suffixReserve, laneW, style, color, 'afterText');"),
               ("  var punctBoxH = getUnifiedPunctuationBoxHeight(style, mm(4.60));\n", ""),
