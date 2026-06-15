@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>漢字テストメーカー縦 正式公開版 v1.01</title>
+<title>漢字テストメーカー縦 正式公開版 v1.02</title>
 <style>
 :root {
   --bg: #f6f8fb;
@@ -207,7 +207,7 @@ ul.compact {
 </head>
 <body>
 <div class="wrap">
-  <h1>漢字テストメーカー縦 <span class="badge">正式公開版 v1.01</span></h1>
+  <h1>漢字テストメーカー縦 <span class="badge">正式公開版 v1.02</span></h1>
 
 
   <div class="panel note">
@@ -215,7 +215,7 @@ ul.compact {
     1. 共通情報と、左の<strong>漢字テスト</strong> / 右の<strong>読みテスト</strong>を入力します。<br>
     2. 問題は <span class="code">[答え|テストに出す文字]</span> の形で入力します。<br>
     3. 固定文字を分けたいときは <span class="code">//</span> を使います。<strong><span class="code">//</span> は印刷されません。空白の代わりではなく、文節の区切り記号です。</strong> 例：<span class="code">パン//を[売る。|★うる。]</span><br>
-    4. 読みテストは同じ10問から自動で作成します。ランダム並び替え後に保存すると、ファイル名の最後に <span class="code">_ランダム並び替え</span> が付きます。<br>
+    4. 読みテストは入力した問題から自動で作成します。最大12問まで対応します。ランダム並び替え後に保存すると、ファイル名の最後に <span class="code">_ランダム並び替え</span> が付きます。<br>
     5. 縦版では、漢字だけの問題は四角のマス、★の問題は <span class="code">( )</span>、読みテストはすべて <span class="code">( )</span> で表示します。
   </div>
 
@@ -343,7 +343,7 @@ ul.compact {
     </datalist>
   </div>
   <div class="panel">
-    <h2>問題（1〜10）</h2>
+    <h2>問題（1〜12）</h2>
     <div class="random-row">
       <button id="btn_shuffle_questions" class="secondary">🔀 問題をランダム並び替え</button>
       <span id="random_status" class="small">現在の並び: 元の順</span>
@@ -355,7 +355,7 @@ ul.compact {
       <tbody id="main_q_body"></tbody>
     </table>
     <div class="muted-box" style="margin-top:12px;">
-      読みテストは、この10問をそのまま使って自動で作成します。<strong>問題文の区切りは空白ではなく <span class="code">//</span> を使ってください。<span class="code">//</span> は印刷されません。</strong> 固定文字を別スロットにしたいときは <span class="code">//</span> を入れてください。例：<span class="code">パン//を[売る。|★うる。]</span>。ランダム並び替え後に保存すると、ファイル名の最後に <span class="code">_ランダム並び替え</span> が付きます。
+      読みテストは、入力した問題（最大12問）をそのまま使って自動で作成します。<strong>問題文の区切りは空白ではなく <span class="code">//</span> を使ってください。<span class="code">//</span> は印刷されません。</strong> 固定文字を別スロットにしたいときは <span class="code">//</span> を入れてください。例：<span class="code">パン//を[売る。|★うる。]</span>。ランダム並び替え後に保存すると、ファイル名の最後に <span class="code">_ランダム並び替え</span> が付きます。
     </div>
   </div>
 
@@ -7546,44 +7546,50 @@ function buildPdfFromCanvases(canvases) {
 
 
 /* public release punctuation consistency patch */
-function getUnifiedPunctuationBoxHeight(style, availableH) {
+function getUnifiedPunctuationBoxHeight(style, availableH, context) {
   var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.08, -mm(0.18), mm(0.22));
-  var base = mm(4.15) + adjust;
+  var base = (context === 'afterParen' ? mm(4.50) : mm(4.25)) + adjust;
   if (availableH == null) { return base; }
   return Math.max(mm(2.35), Math.min(base, availableH));
 }
 
-function getUnifiedPunctuationFontSize(style, boxH) {
+function getUnifiedPunctuationFontSize(style, boxH, text, context) {
   var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.10, -mm(0.22), mm(0.28));
-  return Math.max(mm(2.35), Math.min(mm(4.90) + adjust, boxH * 0.98));
+  var isKuten = String(text || '').indexOf('。') >= 0;
+  var maxSize = isKuten ? (context === 'afterParen' ? mm(5.70) : mm(5.35)) : mm(5.12);
+  var boxRatio = isKuten ? (context === 'afterParen' ? 1.19 : 1.08) : 1.06;
+  return Math.max(mm(2.35), Math.min(maxSize + adjust, boxH * boxRatio));
 }
 
-function getUnifiedPunctuationShift(laneW) {
-  return Math.min(mm(1.48), Math.max(mm(0.76), laneW * 0.15));
+function getUnifiedPunctuationShift(laneW, context) {
+  if (context === 'afterParen') {
+    return Math.min(mm(1.48), Math.max(mm(0.76), laneW * 0.15));
+  }
+  return Math.min(mm(1.30), Math.max(mm(0.62), laneW * 0.13));
 }
 
-function drawUnifiedPunctuation(ctx, text, centerX, topY, boxH, laneW, style, color) {
+function getUnifiedPunctuationYOffset(text, context) {
+  if (String(text || '').indexOf('。') >= 0) {
+    return context === 'afterParen' ? mm(0.50) : mm(0.12);
+  }
+  return context === 'afterParen' ? mm(0.22) : mm(0.06);
+}
+
+function drawUnifiedPunctuation(ctx, text, centerX, topY, boxH, laneW, style, color, context) {
   if (!text) { return; }
-  var actualH = getUnifiedPunctuationBoxHeight(style, boxH);
-  var drawY = topY + Math.max(0, boxH - actualH);
-  drawVerticalText(ctx, text, centerX + getUnifiedPunctuationShift(laneW), drawY, actualH, {
-    fontSize: getUnifiedPunctuationFontSize(style, actualH),
-    minFontSize: mm(2.0),
+  context = context || 'afterText';
+  var actualH = getUnifiedPunctuationBoxHeight(style, boxH, context);
+  var drawY = topY + Math.max(0, boxH - actualH) + getUnifiedPunctuationYOffset(text, context);
+  drawVerticalTextFixedSize(ctx, text, centerX + getUnifiedPunctuationShift(laneW, context), drawY, actualH, {
     padding: 0,
     color: color || '#111',
     weight: '400',
-    stepRatio: 0.92,
-    fitRatio: 0.96,
-    maxWidth: laneW - mm(0.10),
-    fontFamily: style.printFont,
-    sizeAdjust: 0,
-    verticalAlign: 'center'
-  });
+    fontFamily: style.printFont
+  }, getUnifiedPunctuationFontSize(style, actualH, text, context));
 }
-
 function drawFixedDisplaySegment(ctx, text, suffix, centerX, y, h, laneW, style, color) {
   color = color || '#111';
-  var suffixReserve = suffix ? getUnifiedPunctuationBoxHeight(style, mm(4.25)) : 0;
+  var suffixReserve = suffix ? getUnifiedPunctuationBoxHeight(style, mm(4.35), 'afterText') : 0;
   var suffixGap = suffix ? mm(0.10) : 0;
   var textH = Math.max(mm(2.0), h - suffixReserve - suffixGap);
 
@@ -7603,7 +7609,7 @@ function drawFixedDisplaySegment(ctx, text, suffix, centerX, y, h, laneW, style,
     });
   }
   if (suffix) {
-    drawUnifiedPunctuation(ctx, suffix, centerX, y + h - suffixReserve, suffixReserve, laneW, style, color);
+    drawUnifiedPunctuation(ctx, suffix, centerX, y + h - suffixReserve, suffixReserve, laneW, style, color, 'afterText');
   }
 }
 
@@ -7616,14 +7622,17 @@ function drawPatternTokens(ctx, tokens, x, y, w, h, style, options) {
   var strokeColor = options.strokeColor || '#111';
   var textColor = options.textColor || strokeColor;
   var lineWidth = options.lineWidth == null ? 1.55 : options.lineWidth;
-  var punctBoxH = getUnifiedPunctuationBoxHeight(style, mm(4.25));
   var tokenHeights = [];
   var coreCount = tokens.length;
   while (coreCount > 0 && tokens[coreCount - 1].type === 'literal') { coreCount--; }
   var actualTotalH = 0;
   for (var i = 0; i < tokens.length; i++) {
     var token = tokens[i];
-    var tokenH = (token && token.type === 'literal') ? punctBoxH : (cell * Math.max(0.50, token.units || 1));
+    var prevToken = i > 0 ? tokens[i - 1] : null;
+    var punctContext = prevToken && (prevToken.type === 'paren' || prevToken.type === 'bracket') ? 'afterParen' : 'afterText';
+    var tokenH = (token && token.type === 'literal')
+      ? getUnifiedPunctuationBoxHeight(style, punctContext === 'afterParen' ? mm(4.60) : mm(4.35), punctContext)
+      : (cell * Math.max(0.50, token.units || 1));
     tokenHeights.push(tokenH);
     actualTotalH += tokenH;
   }
@@ -7671,7 +7680,9 @@ function drawPatternTokens(ctx, tokens, x, y, w, h, style, options) {
         });
       }
     } else if (token.type === 'literal') {
-      drawUnifiedPunctuation(ctx, token.text, centerX, cursorY, tokenH, w, style, textColor);
+      var literalPrevToken = i > 0 ? tokens[i - 1] : null;
+      var literalContext = literalPrevToken && (literalPrevToken.type === 'paren' || literalPrevToken.type === 'bracket') ? 'afterParen' : 'afterText';
+      drawUnifiedPunctuation(ctx, token.text, centerX, cursorY, tokenH, w, style, textColor, literalContext);
     }
     cursorY += tokenH + gap;
   }
@@ -7687,7 +7698,93 @@ function drawPatternTokens(ctx, tokens, x, y, w, h, style, options) {
 
 
 
-/* public release v1.01 practice sample loader */
+/* v1.02 12-question support patch */
+QUESTION_COUNT = 12;
+
+function circledNumber(n) {
+  var arr = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫'];
+  return arr[n - 1] || String(n);
+}
+
+function getActiveQuestionCount(doc) {
+  var questions = (doc && doc.mainQuestions) || [];
+  var lastFilled = 0;
+  for (var i = 0; i < Math.min(QUESTION_COUNT, questions.length); i++) {
+    if (trimText(questions[i])) { lastFilled = i + 1; }
+  }
+  if (lastFilled <= 10) { return 10; }
+  return Math.min(12, lastFilled);
+}
+
+function getQuestionSectionIndexes(doc) {
+  var count = getActiveQuestionCount(doc);
+  var topCount = count <= 10 ? 5 : 6;
+  var top = [];
+  var bottom = [];
+  for (var i = 0; i < count; i++) {
+    if (i < topCount) { top.push(i); }
+    else { bottom.push(i); }
+  }
+  return { top: top, bottom: bottom };
+}
+
+function getBlankQuestionNumbers(doc) {
+  var blanks = [];
+  var count = getActiveQuestionCount(doc);
+  for (var i = 0; i < count; i++) {
+    if (!trimText((doc.mainQuestions && doc.mainQuestions[i]) || '')) {
+      blanks.push(i + 1);
+    }
+  }
+  return blanks;
+}
+
+function renderPage(doc, mode, canvas) {
+  CURRENT_GUIDE_TONE_ADJUST = toNumber(doc && doc.guideToneAdjust, 0);
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  var padLeft = mm(6.0);
+  var padRight = mm(6.0);
+  var padTop = mm(6.0);
+  var padBottom = mm(5.8);
+  var dividerGap = mm(3.00);
+  var panelGapX = mm(1.15);
+  var panelW = mm(31.0);
+  var contentW = canvas.width - padLeft - padRight;
+  var contentH = canvas.height - padTop - padBottom;
+  var questionW = contentW - panelGapX - panelW;
+  var topH = Math.floor((contentH - dividerGap) / 2);
+  var dividerY = padTop + topH + dividerGap / 2;
+  var bottomY = padTop + topH + dividerGap;
+  var bottomH = contentH - topH - dividerGap;
+  var panelX = padLeft + questionW + panelGapX;
+  var style = getModeStyle(doc, mode);
+  var sections = getQuestionSectionIndexes(doc);
+
+  drawQuestionSectionPortrait(ctx, doc, mode, sections.top, padLeft, padTop, questionW, topH, style);
+  if (mode === 'answer') {
+    drawAnswerInfoPanel(ctx, doc, panelX, padTop, panelW, contentH, style);
+  } else {
+    drawPortraitInfoPanel(ctx, doc, mode, panelX, padTop, panelW, contentH, style);
+  }
+
+  ctx.save();
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 1.05;
+  ctx.beginPath();
+  ctx.moveTo(padLeft, dividerY);
+  ctx.lineTo(padLeft + questionW, dividerY);
+  ctx.stroke();
+  ctx.restore();
+
+  drawQuestionSectionPortrait(ctx, doc, mode, sections.bottom, padLeft, bottomY, questionW, bottomH, style);
+  return canvas;
+}
+
+/* public release v1.02 practice sample loader */
 var PRACTICE_SAMPLE_RELATIVE_PATH = 'sample-data/01_春休み復習01_漢字テスト問題データ.csv';
 var PRACTICE_SAMPLE_CSV = `﻿record_type,section,key,value
 META,COMMON,file_prefix,01_春休み復習01
@@ -7728,7 +7825,7 @@ async function getPracticeSampleCsvText() {
   try {
     var protocol = (window.location && window.location.protocol) ? String(window.location.protocol).toLowerCase() : '';
     if (typeof fetch === 'function' && (protocol === 'https:' || protocol === 'http:')) {
-      var response = await fetch(PRACTICE_SAMPLE_RELATIVE_PATH + '?v=1.01', { cache: 'no-store' });
+      var response = await fetch(PRACTICE_SAMPLE_RELATIVE_PATH + '?v=1.02', { cache: 'no-store' });
       if (response && response.ok) {
         var fetchedText = await response.text();
         if (trimText(String(fetchedText || '').replace(/^﻿/, ''))) {
