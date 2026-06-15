@@ -7548,37 +7548,35 @@ function buildPdfFromCanvases(canvases) {
 /* public release punctuation consistency patch */
 function getUnifiedPunctuationBoxHeight(style, availableH) {
   var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.08, -mm(0.18), mm(0.22));
-  var base = mm(4.15) + adjust;
+  var base = mm(4.25) + adjust;
   if (availableH == null) { return base; }
   return Math.max(mm(2.35), Math.min(base, availableH));
 }
 
 function getUnifiedPunctuationFontSize(style, boxH) {
   var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.10, -mm(0.22), mm(0.28));
-  return Math.max(mm(2.35), Math.min(mm(4.90) + adjust, boxH * 0.98));
+  return Math.max(mm(2.35), Math.min(mm(5.12) + adjust, boxH * 1.06));
 }
 
 function getUnifiedPunctuationShift(laneW) {
   return Math.min(mm(1.48), Math.max(mm(0.76), laneW * 0.15));
 }
 
+function getUnifiedPunctuationYOffset(text) {
+  if (String(text || '').indexOf('。') >= 0) { return mm(0.30); }
+  return mm(0.22);
+}
+
 function drawUnifiedPunctuation(ctx, text, centerX, topY, boxH, laneW, style, color) {
   if (!text) { return; }
   var actualH = getUnifiedPunctuationBoxHeight(style, boxH);
-  var drawY = topY + Math.max(0, boxH - actualH);
-  drawVerticalText(ctx, text, centerX + getUnifiedPunctuationShift(laneW), drawY, actualH, {
-    fontSize: getUnifiedPunctuationFontSize(style, actualH),
-    minFontSize: mm(2.0),
+  var drawY = topY + Math.max(0, boxH - actualH) + getUnifiedPunctuationYOffset(text);
+  drawVerticalTextFixedSize(ctx, text, centerX + getUnifiedPunctuationShift(laneW), drawY, actualH, {
     padding: 0,
     color: color || '#111',
     weight: '400',
-    stepRatio: 0.92,
-    fitRatio: 0.96,
-    maxWidth: laneW - mm(0.10),
-    fontFamily: style.printFont,
-    sizeAdjust: 0,
-    verticalAlign: 'center'
-  });
+    fontFamily: style.printFont
+  }, getUnifiedPunctuationFontSize(style, actualH));
 }
 
 function drawFixedDisplaySegment(ctx, text, suffix, centerX, y, h, laneW, style, color) {
