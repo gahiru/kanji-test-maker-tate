@@ -7546,45 +7546,50 @@ function buildPdfFromCanvases(canvases) {
 
 
 /* public release punctuation consistency patch */
-function getUnifiedPunctuationBoxHeight(style, availableH) {
+function getUnifiedPunctuationBoxHeight(style, availableH, context) {
   var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.08, -mm(0.18), mm(0.22));
-  var base = mm(4.50) + adjust;
+  var base = (context === 'afterParen' ? mm(4.50) : mm(4.25)) + adjust;
   if (availableH == null) { return base; }
   return Math.max(mm(2.35), Math.min(base, availableH));
 }
 
-function getUnifiedPunctuationFontSize(style, boxH, text) {
+function getUnifiedPunctuationFontSize(style, boxH, text, context) {
   var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.10, -mm(0.22), mm(0.28));
   var isKuten = String(text || '').indexOf('。') >= 0;
-  var maxSize = isKuten ? mm(5.70) : mm(5.12);
-  var boxRatio = isKuten ? 1.19 : 1.06;
+  var maxSize = isKuten ? (context === 'afterParen' ? mm(5.70) : mm(5.35)) : mm(5.12);
+  var boxRatio = isKuten ? (context === 'afterParen' ? 1.19 : 1.08) : 1.06;
   return Math.max(mm(2.35), Math.min(maxSize + adjust, boxH * boxRatio));
 }
 
-function getUnifiedPunctuationShift(laneW) {
-  return Math.min(mm(1.48), Math.max(mm(0.76), laneW * 0.15));
+function getUnifiedPunctuationShift(laneW, context) {
+  if (context === 'afterParen') {
+    return Math.min(mm(1.48), Math.max(mm(0.76), laneW * 0.15));
+  }
+  return Math.min(mm(1.30), Math.max(mm(0.62), laneW * 0.13));
 }
 
-function getUnifiedPunctuationYOffset(text) {
-  if (String(text || '').indexOf('。') >= 0) { return mm(0.50); }
-  return mm(0.22);
+function getUnifiedPunctuationYOffset(text, context) {
+  if (String(text || '').indexOf('。') >= 0) {
+    return context === 'afterParen' ? mm(0.50) : mm(0.12);
+  }
+  return context === 'afterParen' ? mm(0.22) : mm(0.06);
 }
 
-function drawUnifiedPunctuation(ctx, text, centerX, topY, boxH, laneW, style, color) {
+function drawUnifiedPunctuation(ctx, text, centerX, topY, boxH, laneW, style, color, context) {
   if (!text) { return; }
-  var actualH = getUnifiedPunctuationBoxHeight(style, boxH);
-  var drawY = topY + Math.max(0, boxH - actualH) + getUnifiedPunctuationYOffset(text);
-  drawVerticalTextFixedSize(ctx, text, centerX + getUnifiedPunctuationShift(laneW), drawY, actualH, {
+  context = context || 'afterText';
+  var actualH = getUnifiedPunctuationBoxHeight(style, boxH, context);
+  var drawY = topY + Math.max(0, boxH - actualH) + getUnifiedPunctuationYOffset(text, context);
+  drawVerticalTextFixedSize(ctx, text, centerX + getUnifiedPunctuationShift(laneW, context), drawY, actualH, {
     padding: 0,
     color: color || '#111',
     weight: '400',
     fontFamily: style.printFont
-  }, getUnifiedPunctuationFontSize(style, actualH, text));
+  }, getUnifiedPunctuationFontSize(style, actualH, text, context));
 }
-
 function drawFixedDisplaySegment(ctx, text, suffix, centerX, y, h, laneW, style, color) {
   color = color || '#111';
-  var suffixReserve = suffix ? getUnifiedPunctuationBoxHeight(style, mm(4.60)) : 0;
+  var suffixReserve = suffix ? getUnifiedPunctuationBoxHeight(style, mm(4.35), 'afterText') : 0;
   var suffixGap = suffix ? mm(0.10) : 0;
   var textH = Math.max(mm(2.0), h - suffixReserve - suffixGap);
 
@@ -7604,7 +7609,7 @@ function drawFixedDisplaySegment(ctx, text, suffix, centerX, y, h, laneW, style,
     });
   }
   if (suffix) {
-    drawUnifiedPunctuation(ctx, suffix, centerX, y + h - suffixReserve, suffixReserve, laneW, style, color);
+    drawUnifiedPunctuation(ctx, suffix, centerX, y + h - suffixReserve, suffixReserve, laneW, style, color, 'afterText');
   }
 }
 
@@ -7617,14 +7622,17 @@ function drawPatternTokens(ctx, tokens, x, y, w, h, style, options) {
   var strokeColor = options.strokeColor || '#111';
   var textColor = options.textColor || strokeColor;
   var lineWidth = options.lineWidth == null ? 1.55 : options.lineWidth;
-  var punctBoxH = getUnifiedPunctuationBoxHeight(style, mm(4.60));
   var tokenHeights = [];
   var coreCount = tokens.length;
   while (coreCount > 0 && tokens[coreCount - 1].type === 'literal') { coreCount--; }
   var actualTotalH = 0;
   for (var i = 0; i < tokens.length; i++) {
     var token = tokens[i];
-    var tokenH = (token && token.type === 'literal') ? punctBoxH : (cell * Math.max(0.50, token.units || 1));
+    var prevToken = i > 0 ? tokens[i - 1] : null;
+    var punctContext = prevToken && (prevToken.type === 'paren' || prevToken.type === 'bracket') ? 'afterParen' : 'afterText';
+    var tokenH = (token && token.type === 'literal')
+      ? getUnifiedPunctuationBoxHeight(style, punctContext === 'afterParen' ? mm(4.60) : mm(4.35), punctContext)
+      : (cell * Math.max(0.50, token.units || 1));
     tokenHeights.push(tokenH);
     actualTotalH += tokenH;
   }
@@ -7672,7 +7680,9 @@ function drawPatternTokens(ctx, tokens, x, y, w, h, style, options) {
         });
       }
     } else if (token.type === 'literal') {
-      drawUnifiedPunctuation(ctx, token.text, centerX, cursorY, tokenH, w, style, textColor);
+      var literalPrevToken = i > 0 ? tokens[i - 1] : null;
+      var literalContext = literalPrevToken && (literalPrevToken.type === 'paren' || literalPrevToken.type === 'bracket') ? 'afterParen' : 'afterText';
+      drawUnifiedPunctuation(ctx, token.text, centerX, cursorY, tokenH, w, style, textColor, literalContext);
     }
     cursorY += tokenH + gap;
   }
