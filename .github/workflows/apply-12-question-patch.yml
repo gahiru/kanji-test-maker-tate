@@ -1,0 +1,154 @@
+name: Apply 12-question patch
+
+on:
+  push:
+    branches:
+      - codex/support-12-questions
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/support-12-questions
+      - name: Patch index.html
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace('v1.01', 'v1.02')
+
+          replacements = [
+              (
+                  '4. 読みテストは同じ10問から自動で作成します。ランダム並び替え後に保存すると、ファイル名の最後に <span class="code">_ランダム並び替え</span> が付きます。<br>',
+                  '4. 読みテストは入力した問題から自動で作成します。最大12問まで対応します。ランダム並び替え後に保存すると、ファイル名の最後に <span class="code">_ランダム並び替え</span> が付きます。<br>',
+              ),
+              (
+                  '<h2>問題（1〜10）</h2>',
+                  '<h2>問題（1〜12）</h2>',
+              ),
+              (
+                  '読みテストは、この10問をそのまま使って自動で作成します。<strong>問題文の区切りは空白ではなく <span class="code">//</span> を使ってください。<span class="code">//</span> は印刷されません。</strong> 固定文字を別スロットにしたいときは <span class="code">//</span> を入れてください。例：<span class="code">パン//を[売る。|★うる。]</span>。ランダム並び替え後に保存すると、ファイル名の最後に <span class="code">_ランダム並び替え</span> が付きます。',
+                  '読みテストは、入力した問題（最大12問）をそのまま使って自動で作成します。<strong>問題文の区切りは空白ではなく <span class="code">//</span> を使ってください。<span class="code">//</span> は印刷されません。</strong> 固定文字を別スロットにしたいときは <span class="code">//</span> を入れてください。例：<span class="code">パン//を[売る。|★うる。]</span>。ランダム並び替え後に保存すると、ファイル名の最後に <span class="code">_ランダム並び替え</span> が付きます。',
+              ),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'Missing expected text: {old[:80]}')
+              text = text.replace(old, new)
+
+          patch = r'''
+          /* v1.02 12-question support patch */
+          QUESTION_COUNT = 12;
+
+          function circledNumber(n) {
+            var arr = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫'];
+            return arr[n - 1] || String(n);
+          }
+
+          function getActiveQuestionCount(doc) {
+            var questions = (doc && doc.mainQuestions) || [];
+            var lastFilled = 0;
+            for (var i = 0; i < Math.min(QUESTION_COUNT, questions.length); i++) {
+              if (trimText(questions[i])) { lastFilled = i + 1; }
+            }
+            if (lastFilled <= 10) { return 10; }
+            return Math.min(12, lastFilled);
+          }
+
+          function getQuestionSectionIndexes(doc) {
+            var count = getActiveQuestionCount(doc);
+            var topCount = count <= 10 ? 5 : 6;
+            var top = [];
+            var bottom = [];
+            for (var i = 0; i < count; i++) {
+              if (i < topCount) { top.push(i); }
+              else { bottom.push(i); }
+            }
+            return { top: top, bottom: bottom };
+          }
+
+          function getBlankQuestionNumbers(doc) {
+            var blanks = [];
+            var count = getActiveQuestionCount(doc);
+            for (var i = 0; i < count; i++) {
+              if (!trimText((doc.mainQuestions && doc.mainQuestions[i]) || '')) {
+                blanks.push(i + 1);
+              }
+            }
+            return blanks;
+          }
+
+          function renderPage(doc, mode, canvas) {
+            CURRENT_GUIDE_TONE_ADJUST = toNumber(doc && doc.guideToneAdjust, 0);
+            var ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            var padLeft = mm(6.0);
+            var padRight = mm(6.0);
+            var padTop = mm(6.0);
+            var padBottom = mm(5.8);
+            var dividerGap = mm(3.00);
+            var panelGapX = mm(1.15);
+            var panelW = mm(31.0);
+            var contentW = canvas.width - padLeft - padRight;
+            var contentH = canvas.height - padTop - padBottom;
+            var questionW = contentW - panelGapX - panelW;
+            var topH = Math.floor((contentH - dividerGap) / 2);
+            var dividerY = padTop + topH + dividerGap / 2;
+            var bottomY = padTop + topH + dividerGap;
+            var bottomH = contentH - topH - dividerGap;
+            var panelX = padLeft + questionW + panelGapX;
+            var style = getModeStyle(doc, mode);
+            var sections = getQuestionSectionIndexes(doc);
+
+            drawQuestionSectionPortrait(ctx, doc, mode, sections.top, padLeft, padTop, questionW, topH, style);
+            if (mode === 'answer') {
+              drawAnswerInfoPanel(ctx, doc, panelX, padTop, panelW, contentH, style);
+            } else {
+              drawPortraitInfoPanel(ctx, doc, mode, panelX, padTop, panelW, contentH, style);
+            }
+
+            ctx.save();
+            ctx.strokeStyle = '#111';
+            ctx.lineWidth = 1.05;
+            ctx.beginPath();
+            ctx.moveTo(padLeft, dividerY);
+            ctx.lineTo(padLeft + questionW, dividerY);
+            ctx.stroke();
+            ctx.restore();
+
+            drawQuestionSectionPortrait(ctx, doc, mode, sections.bottom, padLeft, bottomY, questionW, bottomH, style);
+            return canvas;
+          }
+          '''
+
+          marker = '/* public release v1.02 practice sample loader */'
+          if marker not in text:
+              raise SystemExit('Missing practice sample marker')
+          if '/* v1.02 12-question support patch */' not in text:
+              text = text.replace(marker, patch.strip() + '\n\n' + marker)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Remove temporary workflow and commit patch
+        run: |
+          rm .github/workflows/apply-12-question-patch.yml
+          grep -q 'QUESTION_COUNT = 12' index.html
+          grep -q '問題（1〜12）' index.html
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/apply-12-question-patch.yml
+          git commit -m 'Support up to 12 kanji questions'
+          git push origin codex/support-12-questions
