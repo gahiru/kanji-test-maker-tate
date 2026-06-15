@@ -7548,7 +7548,7 @@ function buildPdfFromCanvases(canvases) {
 /* public release punctuation consistency patch */
 function getUnifiedPunctuationBoxHeight(style, availableH) {
   var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.08, -mm(0.18), mm(0.22));
-  var base = mm(4.35) + adjust;
+  var base = mm(4.50) + adjust;
   if (availableH == null) { return base; }
   return Math.max(mm(2.35), Math.min(base, availableH));
 }
@@ -7556,8 +7556,8 @@ function getUnifiedPunctuationBoxHeight(style, availableH) {
 function getUnifiedPunctuationFontSize(style, boxH, text) {
   var adjust = clampValue((style && style.sizeAdjustPx || 0) * 0.10, -mm(0.22), mm(0.28));
   var isKuten = String(text || '').indexOf('。') >= 0;
-  var maxSize = isKuten ? mm(5.38) : mm(5.12);
-  var boxRatio = isKuten ? 1.12 : 1.06;
+  var maxSize = isKuten ? mm(5.70) : mm(5.12);
+  var boxRatio = isKuten ? 1.19 : 1.06;
   return Math.max(mm(2.35), Math.min(maxSize + adjust, boxH * boxRatio));
 }
 
@@ -7566,7 +7566,7 @@ function getUnifiedPunctuationShift(laneW) {
 }
 
 function getUnifiedPunctuationYOffset(text) {
-  if (String(text || '').indexOf('。') >= 0) { return mm(0.40); }
+  if (String(text || '').indexOf('。') >= 0) { return mm(0.50); }
   return mm(0.22);
 }
 
@@ -7584,7 +7584,7 @@ function drawUnifiedPunctuation(ctx, text, centerX, topY, boxH, laneW, style, co
 
 function drawFixedDisplaySegment(ctx, text, suffix, centerX, y, h, laneW, style, color) {
   color = color || '#111';
-  var suffixReserve = suffix ? getUnifiedPunctuationBoxHeight(style, mm(4.45)) : 0;
+  var suffixReserve = suffix ? getUnifiedPunctuationBoxHeight(style, mm(4.60)) : 0;
   var suffixGap = suffix ? mm(0.10) : 0;
   var textH = Math.max(mm(2.0), h - suffixReserve - suffixGap);
 
@@ -7617,7 +7617,7 @@ function drawPatternTokens(ctx, tokens, x, y, w, h, style, options) {
   var strokeColor = options.strokeColor || '#111';
   var textColor = options.textColor || strokeColor;
   var lineWidth = options.lineWidth == null ? 1.55 : options.lineWidth;
-  var punctBoxH = getUnifiedPunctuationBoxHeight(style, mm(4.45));
+  var punctBoxH = getUnifiedPunctuationBoxHeight(style, mm(4.60));
   var tokenHeights = [];
   var coreCount = tokens.length;
   while (coreCount > 0 && tokens[coreCount - 1].type === 'literal') { coreCount--; }
